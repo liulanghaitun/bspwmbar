@@ -34,6 +34,7 @@ static int ya_int_get_wireless_info(struct wireless_stats *ws,
                                     const char *dev_name) {
   int skfd;
   struct wireless_info winfo;
+  struct iwreq wrq;
 
   /* not all fields may be initialized, so set them to zero */
   memset(ws, 0, sizeof(struct wireless_stats));
@@ -78,6 +79,11 @@ static int ya_int_get_wireless_info(struct wireless_stats *ws,
       iw_print_freq_value(ws->freq, 16, winfo.b.freq);
     }
 
+    /* Get  Ip address */
+    if (iw_get_ext(skfd, dev_name, SIOCGIFADDR, &wrq) >= 0) {
+      memcpy(&(ws->addr), &(wrq.u.ap_addr), sizeof(sockaddr));
+    }
+
     snprintf(ws->mode, 16, "%s", iw_operation_mode[winfo.b.mode]);
   }
   iw_sockets_close(skfd);
@@ -89,25 +95,6 @@ static int ya_int_get_wireless_info(struct wireless_stats *ws,
 //  Todo: Check if rfkill is on and if so show airplaine icon
 
 static char *format = " %s (%d%%)";
-
-static int wireless_network_get_ip_address(char *network_card,
-                                           char *ip_address) {
-
-  int fd;
-  struct ifreq ifr;
-
-  memset(&ifr, 0, sizeof(struct ifreq));
-  fd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (fd == -1)
-    return -1;
-  ifr.ifr_addr.sa_family = AF_INET;
-  strncpy(ifr.ifr_name, network_card, IFNAMSIZ - 1);
-  if (ioctl(fd, SIOCGIFADDR, &ifr) != 0)
-    close(fd);
-  strcpy(ip_address,
-         inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-  return 0;
-}
 
 void wireless_network(draw_context_t *dc, module_option_t *opts) {
   static char *essid;
@@ -129,8 +116,7 @@ void wireless_network(draw_context_t *dc, module_option_t *opts) {
   } else {
     essid = ws.essid;
     link_qual = ws.link_qual * 100 / ws.link_qual_max;
-    wireless_network_get_ip_address(opts->wireless_network.network_card,
-                                    ip_address);
+    strcpy(ip_address, inet_ntoa(((struct sockaddr_in *)&ws.addr)->sin_addr));
   }
 
 DRAW_WIFI:
