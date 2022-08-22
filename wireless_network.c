@@ -125,13 +125,13 @@ void wireless_network(draw_context_t *dc, module_option_t *opts) {
       ws.link_qual_max == 0) {
     essid = "-";
     link_qual = 0;
+    strcpy(ip_address, "0.0.0.0");
   } else {
     essid = ws.essid;
     link_qual = ws.link_qual * 100 / ws.link_qual_max;
+    wireless_network_get_ip_address(opts->wireless_network.network_card,
+                                    ip_address);
   }
-
-  wireless_network_get_ip_address(opts->wireless_network.network_card,
-                                  ip_address);
 
 DRAW_WIFI:
   sprintf(buf, "%s %s:%s (%d%%)", opts->wireless_network.prefix, essid,
