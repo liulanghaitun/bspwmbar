@@ -1,0 +1,54 @@
+.POSIX:
+
+VERSION   =${VERSION}
+
+PREFIX    =${PREFIX}
+MANPREFIX =$(PREFIX)/share/man
+
+DESTDIR   =
+BINPREFIX=$(PREFIX)/bin
+
+CFLAGS   =${CFLAGS}
+LDFLAGS  =${LDFLAGS}
+DCFLAGS  =${DCFLAGS}
+DLDFLAGS =${DLDFLAGS}
+DEPCFLAGS=${DEPCFLAGS}
+DEPLIBS  =${DEPLIBS} -liw
+
+CC=cc
+
+MODS=${MODS}
+OBJ = bspwmbar.o util.o systray.o $(MODS:=.o)
+
+bspwmbar: $(OBJ)
+	$(CC) -o $@ $(OBJ) $(CFLAGS) $(DEPCFLAGS) $(DEPLIBS) $(LDFLAGS) -DVERSION='"$(VERSION)"'
+
+debug:
+	@make CFLAGS="$(DCFLAGS)" LDFLAGS="$(DLDFLAGS)"
+.PHONY: debug
+
+$(OBJ): config.h util.h bspwmbar.h
+
+#.c.o: config.h
+%.o: %.c config.h
+	$(CC) -o $@ -c $(CFLAGS) $(DEPCFLAGS) $<
+
+config.h:
+	cp config.def.h $@
+
+config: config.def.h
+	cp config.def.h config.h
+.PHONY: config
+
+clean:
+	rm -f bspwmar $(OBJ)
+.PHONY: clean
+
+run: bspwmbar
+	./bspwmbar
+
+install:
+	mkdir -p $(DESTDIR)$(BINPREFIX)
+	cp bspwmbar $(DESTDIR)$(BINPREFIX)/
+.PHONY: install
+

@@ -1,0 +1,59 @@
+#!/bin/sh
+
+VERSION=v0.6.0
+PREFIX=/usr/local
+
+PKGCONFIG='pkg-config'
+DEPS='xcb xcb-ewmh xcb-util xcb-randr xcb-shm xcb-renderutil cairo harfbuzz fontconfig'
+MODS='bspwm cpu memory disk thermal datetime battery wireless_network brightness backlight'
+
+# debug flags
+CFLAGS='-Os -Wall -Wextra -pedantic -pipe -fstack-protector-strong -fno-plt -DNDEBUG'
+LDFLAGS='-s'
+
+# debug flags
+DCFLAGS='-g'
+DLDFLAGS=''
+
+usage_exit() {
+  echo "usage: ./configure [option]...
+
+    --prefix=<path>     install target prefix
+"
+  exint 1
+}
+
+set_args() {
+  while [ "${1:-}" != "" ]; do
+    case "$1" in
+      "-p" | "--prefix")
+        shift
+        [ -z "${1:-}" ] && usage_exit
+        prefix="${1}"
+        ;;
+    esac
+    shift
+  done
+}
+
+set_args ${@}
+
+case $(uname -s) in
+  Linux)
+    DEPS="${DEPS} alsa"
+    MODS="${MODS} alsa"
+    DCFLAGS="${DCFLAGS} -fsanitize=address -fno-omit-frame-pointer"
+    DLDFLAGS="${DLDFLAGS} -fsanitize=address"
+    ;;
+  OpenBSD)
+    MODS="${MODS} volume"
+    ;;
+esac
+
+DEPCFLAGS="$("${PKGCONFIG}" --cflags "${DEPS}")"
+DEPLIBS="$("${PKGCONFIG}" --libs "${DEPS}")"
+DCFLAGS="${DCFLAGS}"
+DLDFLAGS="${DLDFLAGS}"
+
+export VERSION PREFIX CFLAGS LDFLAGS MODS DCFLAGS DLDFLAGS DEPCFLAGS DEPLIBS
+envsubst < Makefile.in > Makefile
