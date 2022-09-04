@@ -279,7 +279,16 @@ draw_desktop(draw_context_t *dc, bspwm_desktop_t *desktop, module_desktop_t *opt
 	ws = (state & BSPWM_DESKTOP_FOCUSED) ? opts->focused : opts->unfocused;
 	col = (state == BSPWM_DESKTOP_FREE) ? fg_free : fg;
 
-	draw_color_text(dc, col, desktop->name);
+	if(state == BSPWM_DESKTOP_FREE)
+	{
+            draw_color_text(dc, fg_free, desktop->name);
+	}else{
+	   if(state & BSPWM_DESKTOP_FOCUSED){
+                draw_color_text(dc, color_load(opts->focused), desktop->name);
+	   }else{
+		draw_color_text(dc, color_load(opts->unfocused), desktop->name);
+	   }
+	}
 }
 
 /**

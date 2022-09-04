@@ -6,7 +6,7 @@
 #include "bspwmbar.h"
 
 /* intel */
-#define THERMAL_PATH "/sys/class/thermal/thermal_zone0/temp"
+#define THERMAL_PATH "/sys/class/thermal/thermal_zone1/temp"
 /* k10temp */
 /* #define THERMAL_PATH "/sys/class/hwmon/hwmon1/temp1_input" */
 
@@ -31,6 +31,8 @@ const char *fontname = "sans-serif:pixelsize=18";
 #define ALTFGCOLOR "#7f7f7f"
 /* graph bg color */
 #define ALTBGCOLOR "#555555"
+#define FOCUSEDCOLOR "#ff00ff"
+#define UNFOCUSEDCOLOR "#ffffff"
 
 /*
  * Module definition
@@ -48,8 +50,10 @@ module_t left_modules[] = {
 	{ /* bspwm desktop state */
 		.desk = {
 			.func = desktops,
-			.focused = "",
-			.unfocused = "",
+			//.focused = "",
+			//.unfocused = "",
+			.focused = FOCUSEDCOLOR,
+			.unfocused = UNFOCUSEDCOLOR,
 			.fg_free = ALTFGCOLOR,
 			.fg = FGCOLOR,
 		},
