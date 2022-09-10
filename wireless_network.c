@@ -30,6 +30,19 @@ struct wireless_stats {
   int link_noise; /* dBm */
 };
 
+static char device_name[IFNAMSIZ + 1];
+
+static int get_device_name(int skfd, char *ifname, char *args[], int count) {
+  struct wireless_info winfo;
+  memset(&winfo, 0, sizeof(struct wireless_info));
+  memset(device_name, '\0', sizeof(device_name));
+  if (iw_get_basic_config(skfd, ifname, &(winfo.b)) >= 0) {
+    strncpy(device_name, ifname, IFNAMSIZ);
+    return 0;
+  }
+  return -1;
+}
+
 static int ya_int_get_wireless_info(struct wireless_stats *ws,
                                     const char *dev_name) {
   int skfd;
@@ -41,7 +54,6 @@ static int ya_int_get_wireless_info(struct wireless_stats *ws,
   memset(&winfo, 0, sizeof(struct wireless_info));
 
   skfd = iw_sockets_open();
-
   snprintf(ws->name, IFNAMSIZ + 1, "%s", dev_name);
 
   if (iw_get_basic_config(skfd, dev_name, &(winfo.b)) > -1) {
@@ -108,17 +120,23 @@ void wireless_network(draw_context_t *dc, module_option_t *opts) {
     goto DRAW_WIFI;
   prevtime = curtime;
 
-  if (ya_int_get_wireless_info(&ws, opts->wireless_network.network_card) ||
-      ws.link_qual_max == 0) {
-    essid = "-";
-    link_qual = 0;
-    strcpy(ip_address, "0.0.0.0");
+  essid = "-";
+  link_qual = 0;
+  strcpy(ip_address, "0.0.0.0");
+  if (strlen(opts->wireless_network.network_card) != 0) {
+    memset(device_name, '\0', sizeof(device_name));
+    strncpy(device_name, opts->wireless_network.network_card, IFNAMSIZ);
   } else {
+    int skfd = iw_sockets_open();
+    iw_enum_devices(skfd, get_device_name, NULL, 0);
+    iw_sockets_close(skfd);
+  }
+  if ((strlen(device_name) != 0) &&
+      !ya_int_get_wireless_info(&ws, device_name) && ws.link_qual_max != 0) {
     essid = ws.essid;
     link_qual = ws.link_qual * 100 / ws.link_qual_max;
     strcpy(ip_address, inet_ntoa(((struct sockaddr_in *)&ws.addr)->sin_addr));
   }
-
 DRAW_WIFI:
   sprintf(buf, "%s %s:%s (%d%%)", opts->wireless_network.prefix, essid,
           ip_address, link_qual);

@@ -142,8 +142,8 @@ module_t right_modules[] = {
 	{ /* wireless network */
 		.wireless_network = {
 			.func = wireless_network,
-            		.network_card = "wlan0",
-                        .prefix = "",
+            .network_card = "",
+            .prefix = "",
 		},
 	},
 	{ /* clock */
