@@ -42,8 +42,7 @@ static int get_device_name(int skfd, char *ifname, char *args[], int count) {
   return -1;
 }
 
-static int ya_int_get_wireless_info(struct wireless_stats *ws,
-                                    const char *dev_name) {
+static int ya_int_get_wireless_info(struct wireless_stats *ws, char *dev_name) {
   int skfd;
   struct wireless_info winfo;
   struct iwreq wrq;
@@ -53,16 +52,23 @@ static int ya_int_get_wireless_info(struct wireless_stats *ws,
   memset(&winfo, 0, sizeof(struct wireless_info));
 
   skfd = iw_sockets_open();
-  snprintf(ws->name, IFNAMSIZ + 1, "%s", dev_name);
+  memset(device_name, '\0', sizeof(device_name));
+  if (strlen(dev_name) == 0) {
+    iw_enum_devices(skfd, get_device_name, NULL, 0);
+  } else {
+    strncpy(device_name, dev_name, IFNAMSIZ);
+  }
 
-  if (iw_get_basic_config(skfd, dev_name, &(winfo.b)) > -1) {
+  snprintf(ws->name, IFNAMSIZ + 1, "%s", device_name);
+
+  if (iw_get_basic_config(skfd, device_name, &(winfo.b)) > -1) {
 
     /* Check availability of variables */
-    if (iw_get_range_info(skfd, dev_name, &(winfo.range)) >= 0) {
+    if (iw_get_range_info(skfd, device_name, &(winfo.range)) >= 0) {
       winfo.has_range = 1;
     }
 
-    if (iw_get_stats(skfd, dev_name, &(winfo.stats), &winfo.range,
+    if (iw_get_stats(skfd, device_name, &(winfo.stats), &winfo.range,
                      winfo.has_range) >= 0) {
       winfo.has_stats = 1;
     }
@@ -91,7 +97,7 @@ static int ya_int_get_wireless_info(struct wireless_stats *ws,
     }
 
     /* Get  Ip address */
-    if (iw_get_ext(skfd, dev_name, SIOCGIFADDR, &wrq) >= 0) {
+    if (iw_get_ext(skfd, device_name, SIOCGIFADDR, &wrq) >= 0) {
       memcpy(&(ws->addr), &(wrq.u.ap_addr), sizeof(sockaddr));
     }
 
@@ -122,16 +128,8 @@ void wireless_network(draw_context_t *dc, module_option_t *opts) {
   essid = "-";
   link_qual = 0;
   strcpy(ip_address, "0.0.0.0");
-  memset(device_name, '\0', sizeof(device_name));
-  if (strlen(opts->wireless_network.network_card) != 0) {
-    strncpy(device_name, opts->wireless_network.network_card, IFNAMSIZ);
-  } else {
-    int skfd = iw_sockets_open();
-    iw_enum_devices(skfd, get_device_name, NULL, 0);
-    iw_sockets_close(skfd);
-  }
-  if ((strlen(device_name) != 0) &&
-      !ya_int_get_wireless_info(&ws, device_name) && ws.link_qual_max != 0) {
+  if (!ya_int_get_wireless_info(&ws, opts->wireless_network.network_card) &&
+      ws.link_qual_max != 0) {
     essid = ws.essid;
     link_qual = ws.link_qual * 100 / ws.link_qual_max;
     strcpy(ip_address, inet_ntoa(((struct sockaddr_in *)&ws.addr)->sin_addr));
