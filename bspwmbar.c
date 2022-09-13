@@ -1749,7 +1749,7 @@ run()
 	}
 
 	/* tray initialize */
-	if (!(tray = systray_new(xcb, scr, bar.dcs[0].xbar.win))) {
+	if (!(tray = systray_new(xcb, scr, bar.dcs[bar.ndc-1].xbar.win))) {
 		err("systray_new(): Selection already owned by other window\n");
 		goto CLEANUP;
 	}
