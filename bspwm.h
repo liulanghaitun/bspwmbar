@@ -4,7 +4,7 @@
 #define BSPWMBAR_BSPWM_H_
 #include "util.h"
 /* bspwm commands */
-#define SUBSCRIBE_REPORT "subscribe\0report\0desktop"
+#define SUBSCRIBE_REPORT "subscribe\0report"
 
 typedef enum {
 	BSPWM_DESKTOP_FREE     = 0,
