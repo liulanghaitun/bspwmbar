@@ -229,8 +229,9 @@ bspwm_handle(int fd)
 			err("bspwm: %s", buf + 1);
 			return PR_FAILED;
 		}
-        char* result = strstr(buf, "Wm");
-        if(NULL != result){
+        char* result = strstr(buf, "WM");
+        char* base = strstr(buf,"Wm");
+        if(NULL != result || NULL != base){
             bspwm_parse(result);
             return PR_UPDATE;
         }
