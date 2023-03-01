@@ -183,14 +183,13 @@ volume(draw_context_t *dc, module_option_t *opts)
 		alsa_control(ALSACTL_GETINFO);
 
 	const char *mark = (info.unmuted) ? opts->vol.unmuted : opts->vol.muted;
-	sprintf(buf, "%s%s %.0lf%s", opts->vol.prefix,  mark,
-	                             (double)info.volume / info.max * 100,
-	                             opts->vol.suffix);
+    double volume = (info.unmuted)?(double)info.volume / info.max * 100:0;
+	sprintf(buf, "%s%s %.0lf%s", opts->vol.prefix,  mark, volume, opts->vol.suffix);
 	draw_text(dc, buf);
 }
 
 void
-volume_ev(xcb_generic_event_t *ev)
+volume_ev(xcb_generic_event_t *ev,draw_context_t *dc)
 {
 	xcb_button_press_event_t *button;
 	switch (ev->response_type & ~0x80) {

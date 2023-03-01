@@ -121,8 +121,8 @@ volume(draw_context_t *dc, module_option_t *opts)
 		opts->vol.suffix = "";
 
 	const char *mark = is_muted(fd) ? opts->vol.muted : opts->vol.unmuted;
-	sprintf(buf, "%s%s %d%s", opts->vol.prefix, mark, get_volume(fd) * 100 / 255,
-	                          opts->vol.suffix);
+    int volume = is_muted(fd)?0:(get_volume(fd) * 100 / 255);
+	sprintf(buf, "%s%s %d%s", opts->vol.prefix, mark, volume, opts->vol.suffix);
 	draw_text(dc, buf);
 
 	close(fd);
@@ -153,7 +153,7 @@ set_volume(int fd, int vol)
 }
 
 void
-volume_ev(xcb_generic_event_t *ev)
+volume_ev(xcb_generic_event_t *ev,draw_context_t* dc)
 {
 	xcb_button_press_event_t *button;
 	int fd, vol;

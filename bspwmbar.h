@@ -9,6 +9,8 @@
 #include "util.h"
 #include "bspwm.h"
 
+#define BSPWM_FOCUS "desktop\0-f\0focused:^"
+
 typedef enum {
 	PR_NOOP   =  0,
 	PR_UPDATE,
@@ -32,7 +34,7 @@ typedef module_t module_option_t;
 /* Draw context */
 typedef struct _draw_context_t draw_context_t;
 typedef void (* module_handler_t)(draw_context_t *, module_option_t *);
-typedef void (* event_handler_t)(xcb_generic_event_t *);
+typedef void (* event_handler_t)(xcb_generic_event_t *,draw_context_t *);
 
 /* Poll */
 typedef int (* poll_init_handler_t)();
@@ -174,8 +176,9 @@ void draw_bargraph(draw_context_t *, const char *, graph_item_t *, int);
 void draw_padding_em(draw_context_t *, double);
 
 /* handler */
-void volume_ev(xcb_generic_event_t *);
-void backlight_ev(xcb_generic_event_t *);
+void volume_ev(xcb_generic_event_t *,draw_context_t *);
+void backlight_ev(xcb_generic_event_t *,draw_context_t *);
+void desktop_ev(xcb_generic_event_t *,draw_context_t *);
 
 /* modules */
 void text(draw_context_t *, module_option_t *);
@@ -192,7 +195,6 @@ void battery(draw_context_t *, module_option_t *);
 void backlight(draw_context_t *, module_option_t *);
 void wireless_network(draw_context_t *, module_option_t *); 
 void brightness(draw_context_t *, module_option_t *);
-
 /* temporary buffer */
 extern char buf[1024];
 

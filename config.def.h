@@ -50,6 +50,7 @@ module_t left_modules[] = {
 	{ /* bspwm desktop state */
 		.desk = {
 			.func = desktops,
+            .handler = desktop_ev,
 			//.focused = "",
 			//.unfocused = "",
 			.focused = FOCUSEDCOLOR,
@@ -101,6 +102,7 @@ module_t right_modules[] = {
 	},
 	{ /* backlight */ .backlight = {
 			.func = brightness,
+            .handler = backlight_ev,
 			.display = "intel_backlight",
 			.prefix = "盛 ",
 			.suffix = "",

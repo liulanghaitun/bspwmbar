@@ -10,28 +10,6 @@
 
 #include "bspwmbar.h"
 #include "bspwm.h"
-#include "util.h"
-
-struct _bspwm_desktop_t {
-	char *name;
-	bspwm_desktop_state_t state;
-
-	list_head head;
-};
-
-struct _bspwm_monitor_t {
-	char *name;
-	bool is_active;
-
-	/* cache of number of desktops */
-	list_head desktops;
-
-	list_head head;
-};
-
-typedef struct {
-	list_head monitors;
-} bspwm_t;
 
 static void bspwm_init();
 static int bspwm_connect();
@@ -251,8 +229,11 @@ bspwm_handle(int fd)
 			err("bspwm: %s", buf + 1);
 			return PR_FAILED;
 		}
-		bspwm_parse(buf);
-		return PR_UPDATE;
+        char* result = strstr(buf, "Wm");
+        if(NULL != result){
+            bspwm_parse(result);
+            return PR_UPDATE;
+        }
 	}
 	return PR_FAILED;
 }
@@ -321,4 +302,17 @@ desktops(draw_context_t *dc, module_option_t *opts)
 		if (&mon->desktops != cur->next)
 			draw_padding_em(dc, 1);
 	}
+}
+
+
+bspwm_t*
+get_bspwm_t(){
+    return bspwm;
+}
+
+void
+sendMessage(char* buffer,size_t length){
+    int bsp_socket_fd = bspwm_connect();
+    write(bsp_socket_fd, buffer, length);
+    close(bsp_socket_fd);
 }

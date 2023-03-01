@@ -109,7 +109,7 @@ backlight_set(xcb_connection_t *xcb, xcb_randr_output_t output, int32_t value)
 }
 
 void
-backlight_ev(xcb_generic_event_t *ev)
+backlight_ev(xcb_generic_event_t *ev,draw_context_t* dc)
 {
 	backlight_t backlight;
 	xcb_button_press_event_t *button;

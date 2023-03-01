@@ -26,6 +26,7 @@
 #include <sys/shm.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
 
 /* XCB */
 #include <xcb/xcb.h>
@@ -63,6 +64,8 @@
 /* check event and returns true if target is the label */
 #define IS_LABEL_EVENT(l,e) (((l).x < (e)->event_x) && ((e)->event_x < (l).x + (l).width))
 
+#define BSPWIN_FOCUSE "desktop\0-f\0focused:^"
+
 struct _color_t {
 	char *name;
 	uint16_t red;
@@ -97,6 +100,13 @@ typedef struct {
 } label_t;
 
 typedef int desktop_state_t;
+
+typedef struct postion_t {
+    int start;
+    int end;
+    char name[1024];
+    list_head position;
+}position_t;
 
 typedef struct {
 	char name[NAME_MAXSZ];
@@ -200,6 +210,8 @@ static struct epoll_event events[MAX_EVENTS];
 static struct kevent events[MAX_EVENTS];
 #endif
 static list_head pollfds;
+static FILE *fp;
+static position_t *current_position;
 
 /* private functions */
 static void color_load_hex(const char *, color_t *);
@@ -496,7 +508,7 @@ dc_init(draw_context_t *dc, xcb_connection_t *xcb, xcb_screen_t *scr, int x,
 	window_t *xw = &dc->xbar;
 	int i = 0;
 
-	const uint32_t attrs[] = { bar.bg->pixel, XCB_EVENT_MASK_NO_EVENT };
+	const uint32_t attrs[] = { bar.bg->pixel, XCB_EVENT_MASK_BUTTON_PRESS };
 
 	xw->win = xcb_generate_id(xcb);
 	xw->x = x;
@@ -569,7 +581,7 @@ dc_init(draw_context_t *dc, xcb_connection_t *xcb, xcb_screen_t *scr, int x,
 		dc->right_labels[i].option = &right_modules[i];
 
 	/* send window rendering request */
-	winconf.stack_mode = XCB_STACK_MODE_BELOW;
+	winconf.stack_mode = XCB_STACK_MODE_TOP_IF;
 	xcb_configure_window_aux(xcb, xw->win, XCB_CONFIG_WINDOW_STACK_MODE, &winconf);
 	xcb_map_window(xcb, xw->win);
 
@@ -1492,7 +1504,7 @@ xcb_event_notify(xcb_generic_event_t *event, draw_context_t *dc)
 		if (!dc->left_labels[i].option->any.handler)
 			continue;
 		if (IS_LABEL_EVENT(dc->left_labels[i], button)) {
-			dc->left_labels[i].option->any.handler(event);
+			dc->left_labels[i].option->any.handler(event,dc);
 			return PR_UPDATE;
 		}
 	}
@@ -1500,7 +1512,7 @@ xcb_event_notify(xcb_generic_event_t *event, draw_context_t *dc)
 		if (!dc->right_labels[i].option->any.handler)
 			continue;
 		if (IS_LABEL_EVENT(dc->right_labels[i], button)) {
-			dc->right_labels[i].option->any.handler(event);
+			dc->right_labels[i].option->any.handler(event,dc);
 			return PR_UPDATE;
 		}
 	}
@@ -1779,6 +1791,8 @@ run()
 	/* cache Atom */
 	xembed_info = xcb_atom_get(bar.xcb, "_XEMBED_INFO", false);
 
+    current_position = calloc(1,sizeof(position_t));
+    list_head_init(&current_position->position);
 	/* main loop */
 	poll_loop(render);
 
@@ -1800,3 +1814,81 @@ main(int argc, char *argv[])
 
 	run();
 }
+
+int getMessageBuffer(int value,char* message,const char* buffer,int length){
+    char pos[10];
+    char* current = message;
+    for(int index=0;index<length;index++){
+        sprintf(current++,"%c", *(buffer++));
+    }
+    sprintf(pos,"%d",value);
+    sprintf(--current,"%s",pos);
+    length+=strlen(pos);
+    return length;
+}
+
+void
+desktop_ev(xcb_generic_event_t *event,draw_context_t* dc)
+{
+	bspwm_monitor_t *mon = NULL;
+	bspwm_desktop_t *desktop;
+    position_t *bspwm_position;
+	list_head *cur;
+    list_head *pos;
+    list_head *tmp;
+    int index = 1;
+    int width = celwidth;
+    int len = 0;
+    int count = 0;
+    int total_count = 0;
+    char buffer[100];
+    bspwm_t *bspwm =get_bspwm_t();
+    label_t desk_label = dc->left_labels[1];
+    xcb_button_press_event_t* press_event = (xcb_button_press_event_t*)event;
+    int  start = desk_label.x;
+    int  end = desk_label.x;
+    if(NULL != bspwm){
+        list_for_each(&bspwm->monitors, cur) {
+            mon = list_entry(cur, bspwm_monitor_t, head);
+        }
+        if (!mon)
+            return;
+
+        list_count(&mon->desktops, count);
+        list_count(&current_position->position,total_count);
+        if(count != total_count){
+            width = desk_label.width/count;
+            list_for_each_safe(&current_position->position, pos,tmp){
+                bspwm_position = list_entry(pos, position_t, position);
+                free(bspwm_position);
+            }
+            list_empty(&current_position->position);
+            list_for_each(&mon->desktops, cur) {
+                desktop = list_entry(cur, bspwm_desktop_t, head);
+                position_t *bspwm_position = (position_t *)calloc(1,sizeof(position_t));
+                start = end;
+                end = start +width;
+                bspwm_position->start = start;
+                bspwm_position->end = end;
+                sprintf(bspwm_position->name, "%s",desktop->name);
+                list_add_tail(&current_position->position,&bspwm_position->position);
+            }
+        }
+
+        list_for_each_safe(&current_position->position, pos,tmp){
+            bspwm_position = list_entry(pos, position_t, position);
+            if(press_event->event_x >= bspwm_position->start && press_event->event_x <= bspwm_position->end){
+                break;
+            }else{
+                index++;
+            }
+        }
+
+        char *message = malloc(512*sizeof(char));
+        memset(message, 0, 512);
+        int length = getMessageBuffer(index,message,BSPWIN_FOCUSE,LENGTH(BSPWIN_FOCUSE));
+        sendMessage(message,length);
+        free(message);
+    }
+}
+
